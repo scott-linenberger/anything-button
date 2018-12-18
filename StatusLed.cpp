@@ -61,21 +61,41 @@ void StatusLed::updateFlashingState() {
   /* toggle the flashing state */
   stateFlashing = !stateFlashing;
 
-  /* write the values */
+  /* turn all colors off */
+  digitalWrite(pinRed, offState);
+  digitalWrite(pinGreen, offState);
+  digitalWrite(pinBlue, offState);
+
+  /* write the on/off flashing state to pins */
+  if (flashingRed) {
+    digitalWrite(pinRed, stateFlashing);
+  }
+
+  if (flashingGreen) {
+    digitalWrite(pinGreen, stateFlashing);
+  }
+
+  if (flashingBlue) {
+    digitalWrite(pinBlue, stateFlashing);
+  }
+
+  /* update the timeLastFlashed timestamp */
+  timeLastFlashed = millis();
 }
 
 void StatusLed::setModeFlashing(
-  boolean _stateRed,
-  boolean _stateGreen,
-  boolean _stateBlue,
+  boolean _flashingRed,
+  boolean _flashingGreen,
+  boolean _flashingBlue,
   uint16_t _timeout
 ) {
   /* assign vars */
-  stateRed = _stateRed;
-  stateGreen = _stateGreen;
-  stateBlue = _stateBlue;
   timeoutFlash = _timeout;
+  flashingRed = _flashingRed;
+  flashingGreen = _flashingGreen;
+  flashingBlue = _flashingBlue;
 
+  /* set the mode to flashing */
   mode = 2;
 }
 
@@ -83,6 +103,9 @@ void StatusLed::off() {
   digitalWrite(pinRed, offState);
   digitalWrite(pinGreen, offState);
   digitalWrite(pinBlue, offState);
+
+  /* set the mode to off */
+  mode = 0;
 }
 
 void StatusLed::red() {
@@ -106,16 +129,130 @@ void StatusLed::blue() {
   digitalWrite(pinBlue, onState);
 }
 
-void StatusLed::flashRed(uint16_t _timeoutFlash) {
-  /* set the timeout */
-  timeoutFlash = _timeoutFlash;
+void StatusLed::purple() {
+  off();
+  /* set the mode to solid color */
+  setModeSolidColor();
+  digitalWrite(pinRed, onState);
+  digitalWrite(pinBlue, onState);
+}
 
+void StatusLed::yellow() {
+  off();
+  /* set the mode to solid color */
+  setModeSolidColor();
+  digitalWrite(pinRed, onState);
+  digitalWrite(pinGreen, onState);
+}
+
+void StatusLed::white() {
+  off();
+
+  /* set the mode to solid color */
+  setModeSolidColor();
+  digitalWrite(pinRed, onState);
+  digitalWrite(pinGreen, onState);
+  digitalWrite(pinBlue, onState);
+}
+
+void StatusLed::flashRed(uint16_t _timeoutFlash) {
+  setModeFlashing(
+    true,
+    false,
+    false,
+    _timeoutFlash
+  );
 }
 
 void StatusLed::flashGreen(uint16_t _timeoutFlash) {
-
+  setModeFlashing(
+    false,
+    true,
+    false,
+    _timeoutFlash
+  );
 }
 
 void StatusLed::flashBlue(uint16_t _timeoutFlash) {
+  setModeFlashing(
+    false,
+    false,
+    true,
+    _timeoutFlash
+  );
+}
 
+void StatusLed::flashPurple(uint16_t _timeoutFlash) {
+  setModeFlashing(
+    true,
+    false,
+    true,
+    _timeoutFlash
+  );
+}
+
+void StatusLed::flashYellow(uint16_t _timeoutFlash) {
+  setModeFlashing(
+    true,
+    true,
+    false,
+    _timeoutFlash
+  );
+}
+
+void StatusLed::flashAqua(uint16_t _timeoutFlash) {
+  setModeFlashing(
+    false,
+    true,
+    true,
+    _timeoutFlash
+  );
+}
+
+void StatusLed::flashWhite(uint16_t _timeoutFlash) {
+  setModeFlashing(
+    true,
+    true,
+    true,
+    _timeoutFlash
+  );
+}
+
+void StatusLed::blockingFlash(
+  boolean red,
+  boolean green,
+  boolean blue,
+  uint8_t timesToFlash,
+  uint16_t delayBetweenFlashes
+) {
+
+  /* turn the LED off */
+  off();
+
+  /* on/off flag */
+  boolean isOn = false;
+
+  /* begin flashing */
+  for (uint8_t i = 0; i < timesToFlash; i++) {
+    /* toggle the on/off flag */
+    isOn = !isOn;
+
+    /* write to the pins */
+    if (red) {
+      digitalWrite(pinRed, isOn);
+    }
+
+    if (green) {
+      digitalWrite(pinGreen, isOn);
+    }
+
+    if (blue) {
+      digitalWrite(pinBlue, isOn);
+    }
+
+    /* wait */
+    delay(delayBetweenFlashes);
+  }
+
+  off();
 }

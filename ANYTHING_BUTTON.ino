@@ -1,12 +1,13 @@
+/* include the configuration file */
+#include "config.h"
+
+/* include required Arduino libs */
 #include <Arduino.h>
+#include "AdafruitIO_WiFi.h"
+
+/* include custom classes */
 #include "StatusLed.h"
 #include "Button.h"
-
-/* pin declarations */
-#define PIN_LED_GREEN 12
-#define PIN_LED_BLUE 13
-#define PIN_LED_RED 14
-#define PIN_BUTTON 4
 
 /* = BUTTON SETUP = */
 /* time to wait between presses in ms */
@@ -16,6 +17,13 @@ uint16_t TIMEOUT_DEBOUNCE = 1000;
 uint16_t TIMEOUT_PRESS = 100;
 boolean STATE_BUTTON_TRIGGERED = HIGH;
 
+/* Adafruit IO settings */
+AdafruitIO_WiFi io(IO_USERNAME, IO_KEY, WIFI_SSID, WIFI_PASS);
+
+/* IO feeds */
+AdafruitIO_Feed *feedIncoming = io.feed(FEED_INCOMING);
+AdafruitIO_Feed *feedOutgoing = io.feed(FEED_OUTGOING);
+
 Button button = Button(
   PIN_BUTTON,
   TIMEOUT_DEBOUNCE,
@@ -23,13 +31,11 @@ Button button = Button(
   STATE_BUTTON_TRIGGERED);
 
 /* = STATUS LED SETUP = */
-boolean ledOnState = LOW;
-
 StatusLed statusLed = StatusLed(
   PIN_LED_RED,
   PIN_LED_GREEN,
   PIN_LED_BLUE,
-  ledOnState
+  LED_ON_STATE
 );
 
 void setup() {
@@ -42,6 +48,7 @@ void setup() {
   /* init objects */
   statusLed.begin();
   button.begin();
+  connectToIo();
 }
 
 void initPins() {
@@ -54,15 +61,72 @@ void initPins() {
   pinMode(PIN_BUTTON, INPUT);
 }
 
+void connectToIo() {
+  Serial.print("Connecting to AdafruitIO...");
+  
+  io.connect();
+  initFeeds();
+
+  boolean isOn = false;
+
+  while(io.status() < AIO_CONNECTED) {
+    isOn = !isOn;
+    Serial.print(".");
+
+    if (isOn){
+      statusLed.yellow();
+    }
+
+    if (!isOn) {
+      statusLed.green();
+    }
+
+    delay(100);
+  }
+
+  Serial.println(io.statusText());
+  statusLed.blockingFlash(
+    false,
+    true,
+    false,
+    6,
+    100
+  );
+}
+
+void initFeeds() {
+  feedIncoming->onMessage(handleIncomingMessage);
+}
+
+void handleIncomingMessage(AdafruitIO_Data *data) {
+  Serial.print("received <- ");
+  Serial.println(data->value());
+
+  /* flash purple */
+  statusLed.blockingFlash(
+    true,
+    false,
+    true,
+    6,
+    100
+  );
+}
+
 void loop() {
   if (button.isPressed()) {
     Serial.println("Pressed!");
-    
-    statusLed.red();
-    delay(500);
-    statusLed.off();
+    feedOutgoing->save(1);
+    /* flash blue */
+    statusLed.blockingFlash(
+    false,
+    false,
+    true,
+    6,
+    100
+  );
   }
 
-  /* call the status LED's run method on each loop */
+  /* call run methods on each loop */
   statusLed.run();
+  io.run();
 }
